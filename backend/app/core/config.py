@@ -1,42 +1,26 @@
-import os
-from pathlib import Path
+from functools import lru_cache
 
-from dotenv import load_dotenv
-
-# backend/ directory (parent of app/)
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-load_dotenv(BASE_DIR / ".env")
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings:
-    """Central app settings, read from environment variables (see .env.example)."""
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    PROJECT_NAME: str = "Logicopilot AI"
-    API_PREFIX: str = "/api/v1"
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./logicopilot.db")
-    CORS_ORIGINS: list[str] = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+    database_url: str = "sqlite:///./logicopilot.db"
 
-    # File storage for uploaded templates and rendered page previews.
-    UPLOADS_DIR: Path = Path(os.getenv("UPLOADS_DIR", str(BASE_DIR / "uploads")))
+    jwt_secret_key: str = "change-me-to-a-long-random-string"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 7
 
-    # OpenAI — prompt generation + extraction pipeline.
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    cors_origins: str = "http://localhost:5173"
+    cookie_secure: bool = False
 
-    # Google Cloud Document AI — OCR.
-    DOCAI_PROJECT_ID: str = os.getenv("DOCAI_PROJECT_ID", "")
-    DOCAI_LOCATION: str = os.getenv("DOCAI_LOCATION", "us")
-    DOCAI_PROCESSOR_ID: str = os.getenv("DOCAI_PROCESSOR_ID", "")
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
-settings = Settings()
-
-# The google-cloud libraries discover credentials via this env var. Resolve a
-# relative path (as written in .env) against backend/ so it works regardless of
-# the process's working directory.
-_creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
-if _creds:
-    _creds_path = Path(_creds)
-    if not _creds_path.is_absolute():
-        _creds_path = BASE_DIR / _creds_path
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(_creds_path)
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

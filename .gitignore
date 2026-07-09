@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+*.db
+
+# Secrets — never commit
+google-credentials.json
+
+# Uploaded documents & rendered previews
+uploads/
+
+# Node
+node_modules/
+dist/
+
+# Editors
+.vscode/
+.idea/

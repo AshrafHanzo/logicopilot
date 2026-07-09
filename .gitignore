@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Env files (commit .env.example instead)
+.env
+.env.local
+
+# Local dev database
+*.db
+
+# Build output
+dist/
+dist-ssr/
+
+# Editor/OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

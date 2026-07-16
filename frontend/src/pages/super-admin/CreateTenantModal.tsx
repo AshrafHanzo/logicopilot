@@ -18,6 +18,9 @@ export function CreateTenantModal({
   const [name, setName] = useState("");
   const [region, setRegion] = useState("");
   const [currency, setCurrency] = useState("");
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -25,6 +28,9 @@ export function CreateTenantModal({
     setName("");
     setRegion("");
     setCurrency("");
+    setAdminName("");
+    setAdminEmail("");
+    setAdminPassword("");
     setError(null);
   }
 
@@ -33,7 +39,14 @@ export function CreateTenantModal({
     setError(null);
     setIsSubmitting(true);
     try {
-      await tenantsApi.createTenant({ name, region: region || undefined, currency: currency || undefined });
+      await tenantsApi.createTenant({
+        name,
+        region: region || undefined,
+        currency: currency || undefined,
+        admin_full_name: adminName,
+        admin_email: adminEmail,
+        admin_password: adminPassword,
+      });
       reset();
       onCreated();
     } catch (err) {
@@ -55,12 +68,47 @@ export function CreateTenantModal({
       title="New Tenant"
     >
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <Input label="Company name" value={name} onChange={(e) => setName(e.target.value)} placeholder="4S Logistics" required />
-        <Input label="Region" value={region} onChange={(e) => setRegion(e.target.value)} placeholder="IN" />
-        <Input label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="INR" maxLength={3} />
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Company</p>
+          <div className="flex flex-col gap-3">
+            <Input label="Company name" value={name} onChange={(e) => setName(e.target.value)} placeholder="4S Logistics" required />
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Region" value={region} onChange={(e) => setRegion(e.target.value)} placeholder="IN" />
+              <Input label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="INR" maxLength={3} />
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Tenant Admin login</p>
+          <div className="flex flex-col gap-3">
+            <Input label="Admin full name" value={adminName} onChange={(e) => setAdminName(e.target.value)} placeholder="Jane Doe" required />
+            <Input
+              label="Admin email (username)"
+              type="email"
+              value={adminEmail}
+              onChange={(e) => setAdminEmail(e.target.value)}
+              placeholder="admin@4slogistics.com"
+              required
+            />
+            <Input
+              label="Temporary password"
+              type="text"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              minLength={8}
+              required
+            />
+          </div>
+          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+            Share this with the tenant admin directly — they'll log in with the email + password.
+          </p>
+        </div>
+
         {error && <Alert>{error}</Alert>}
         <Button type="submit" isLoading={isSubmitting} className="mt-1">
-          Create tenant
+          Create tenant &amp; admin
         </Button>
       </form>
     </Modal>

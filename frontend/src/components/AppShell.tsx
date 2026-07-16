@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { RoleBadge } from "./ui/Badge";
+import { superAdminFeatures } from "../features/registry";
 
 function initials(name: string): string {
   return name
@@ -34,13 +36,65 @@ export function AppShell({
           <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">Logicopilot</span>
         </div>
 
-        <nav className="flex-1 px-3 py-2">
-          <div className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          <Link to={user?.role === "super_admin" ? "/super-admin" : user?.role === "tenant_admin" ? "/tenant-admin" : "/operator"} className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
             Dashboard
-          </div>
+          </Link>
+
+          {user?.role === "super_admin" && (
+            <div className="mt-8">
+              <h3 className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Platform Features</h3>
+              <div className="mt-2 space-y-1">
+                {superAdminFeatures.map((f) => (
+                  <Link
+                    key={f.path}
+                    to={f.path}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                  >
+                    {f.navLabel}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {user?.role === "tenant_admin" && (
+            <div className="mt-8">
+              <h3 className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Workspace</h3>
+              <div className="mt-2 space-y-1">
+                {[
+                  { to: "/tenant-admin/data-transformation", label: "Data Transformation" },
+                  { to: "/tenant-admin/erp-access", label: "ERP Access" },
+                  { to: "/tenant-admin", label: "Operator Creation" },
+                ].map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {user?.role === "operator" && (
+            <div className="mt-8">
+              <h3 className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Workspace</h3>
+              <div className="mt-2 space-y-1">
+                <Link
+                  to="/jobs"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                >
+                  Jobs
+                </Link>
+              </div>
+            </div>
+          )}
         </nav>
 
         <div className="border-t border-slate-200 p-4 dark:border-slate-800">

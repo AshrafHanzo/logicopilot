@@ -11,7 +11,14 @@ export async function getTenant(tenantId: string): Promise<Tenant> {
   return response.data;
 }
 
-export async function createTenant(payload: { name: string; region?: string; currency?: string }): Promise<Tenant> {
+export async function createTenant(payload: {
+  name: string;
+  region?: string;
+  currency?: string;
+  admin_full_name?: string;
+  admin_email?: string;
+  admin_password?: string;
+}): Promise<Tenant> {
   const response = await apiClient.post<Tenant>("/tenants", payload);
   return response.data;
 }

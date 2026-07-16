@@ -3,8 +3,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, require_role
+from app.core.security import hash_password
 from app.models.tenant import Tenant
-from app.models.user import SUPER_ADMIN, User
+from app.models.user import SUPER_ADMIN, TENANT_ADMIN, User
 from app.schemas.tenant import TenantCreate, TenantOut
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
@@ -14,15 +15,41 @@ router = APIRouter(prefix="/tenants", tags=["tenants"])
 def create_tenant(
     payload: TenantCreate,
     db: Session = Depends(get_db),
-    _=Depends(require_role(SUPER_ADMIN)),
+    creator: User = Depends(require_role(SUPER_ADMIN)),
 ) -> TenantOut:
+    """Creates the company and, if admin credentials are supplied, its tenant-admin
+    login in the same step (atomic — a bad email rolls the whole thing back)."""
+    wants_admin = any([payload.admin_full_name, payload.admin_email, payload.admin_password])
+    if wants_admin and not all([payload.admin_full_name, payload.admin_email, payload.admin_password]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide admin name, email, and password together (or none).",
+        )
+    if wants_admin and len(payload.admin_password or "") < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin password must be at least 8 characters.")
+
     tenant = Tenant(name=payload.name, region=payload.region, currency=payload.currency)
     db.add(tenant)
     try:
+        db.flush()  # assign tenant.id; still one transaction with the admin below
+        if wants_admin:
+            db.add(
+                User(
+                    email=payload.admin_email,
+                    hashed_password=hash_password(payload.admin_password),
+                    full_name=payload.admin_full_name,
+                    role=TENANT_ADMIN,
+                    tenant_id=tenant.id,
+                    created_by_id=creator.id,
+                )
+            )
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A tenant with this name already exists")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A tenant with this name, or a user with that admin email, already exists.",
+        )
     db.refresh(tenant)
     return TenantOut.model_validate(tenant)
 

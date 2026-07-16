@@ -1,6 +1,11 @@
 # Dependencies
 node_modules/
 .venv/
+venv/
+
+# Runtime uploads (user documents, rendered pages, OCR cache)
+uploads/
+backend/uploads/
 
 # Python
 __pycache__/
@@ -10,6 +15,11 @@ __pycache__/
 # Env files (commit .env.example instead)
 .env
 .env.local
+
+# Secrets — service-account keys (never commit)
+google-credentials.json
+*-service-account*.json
+silken-obelisk-*.json
 
 # Local dev database
 *.db

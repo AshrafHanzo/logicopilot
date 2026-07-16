@@ -18,6 +18,7 @@ export function TenantAdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editOperator, setEditOperator] = useState<User | null>(null);
 
   async function refresh() {
     setError(null);
@@ -61,9 +62,14 @@ export function TenantAdminDashboard() {
       header: "",
       className: "text-right",
       render: (u) => (
-        <Button variant="ghost" size="sm" onClick={() => handleToggleActive(u)}>
-          {u.is_active ? "Disable" : "Enable"}
-        </Button>
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => { setEditOperator(u); setModalOpen(true); }}>
+            Edit
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => handleToggleActive(u)}>
+            {u.is_active ? "Disable" : "Enable"}
+          </Button>
+        </div>
       ),
     },
   ];
@@ -84,7 +90,7 @@ export function TenantAdminDashboard() {
       <Card>
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
           <h2 className="font-semibold text-slate-900 dark:text-slate-50">Operators</h2>
-          <Button size="sm" onClick={() => setModalOpen(true)}>
+          <Button size="sm" onClick={() => { setEditOperator(null); setModalOpen(true); }}>
             + New Operator
           </Button>
         </div>
@@ -100,9 +106,14 @@ export function TenantAdminDashboard() {
 
       <CreateOperatorModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          setEditOperator(null);
+        }}
+        editUser={editOperator}
         onCreated={() => {
           setModalOpen(false);
+          setEditOperator(null);
           refresh();
         }}
       />

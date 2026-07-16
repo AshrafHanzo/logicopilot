@@ -23,6 +23,8 @@ class UserCreate(BaseModel):
     full_name: str
     role: str
     tenant_id: str | None = None
+    # Template sets to assign to this user (empty = access all of their tenant's).
+    template_ids: list[str] = []
 
     @field_validator("role")
     @classmethod
@@ -40,4 +42,15 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    is_active: bool
+    # All optional — only provided fields are changed.
+    full_name: str | None = None
+    password: str | None = None
+    is_active: bool | None = None
+    template_ids: list[str] | None = None  # None = leave as-is; list = replace assignments
+
+    @field_validator("password")
+    @classmethod
+    def password_min_length_optional(cls, value: str | None) -> str | None:
+        if value is not None and len(value) < 8:
+            raise ValueError("password must be at least 8 characters")
+        return value

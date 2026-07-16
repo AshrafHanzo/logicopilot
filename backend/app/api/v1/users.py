@@ -51,6 +51,19 @@ def create_user(
     )
     db.add(user)
     try:
+        db.flush()  # assign user.id before creating assignments, all in one transaction
+        if payload.template_ids:
+            from app.models.template_group import TemplateGroup
+            from app.models.user_template import UserTemplateAssignment
+
+            for gid in dict.fromkeys(payload.template_ids):  # de-dupe, keep order
+                group = db.get(TemplateGroup, gid)
+                if group is None or group.tenant_id != tenant_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="A selected template does not belong to this tenant.",
+                    )
+                db.add(UserTemplateAssignment(tenant_id=tenant_id, user_id=user.id, group_id=gid))
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -98,8 +111,46 @@ def update_user(
     if actor.role == TENANT_ADMIN and user.role != OPERATOR:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant admins may only manage operator accounts")
 
-    user.is_active = payload.is_active
+    if payload.full_name is not None:
+        user.full_name = payload.full_name
+    if payload.password is not None:
+        user.hashed_password = hash_password(payload.password)
+    if payload.is_active is not None:
+        user.is_active = payload.is_active
+
+    if payload.template_ids is not None:
+        from app.models.template_group import TemplateGroup
+        from app.models.user_template import UserTemplateAssignment
+
+        # Replace the user's assignments with the provided set.
+        db.query(UserTemplateAssignment).filter(UserTemplateAssignment.user_id == user.id).delete()
+        for gid in dict.fromkeys(payload.template_ids):
+            group = db.get(TemplateGroup, gid)
+            if group is None or group.tenant_id != user.tenant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="A selected template does not belong to this user's tenant.",
+                )
+            db.add(UserTemplateAssignment(tenant_id=user.tenant_id, user_id=user.id, group_id=gid))
+
     db.add(user)
     db.commit()
     db.refresh(user)
     return UserOut.model_validate(user)
+
+
+@router.get("/{user_id}/templates")
+def get_user_templates(
+    user_id: str,
+    db: Session = Depends(get_db),
+    scope: TenantScope = Depends(get_tenant_scope),
+    _=Depends(require_role(SUPER_ADMIN, TENANT_ADMIN)),
+) -> dict:
+    """Template ids currently assigned to a user (for pre-filling the edit form)."""
+    from app.models.user_template import UserTemplateAssignment
+
+    user = scoped_query(db, User, scope).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    rows = db.query(UserTemplateAssignment).filter(UserTemplateAssignment.user_id == user_id).all()
+    return {"template_ids": [r.group_id for r in rows]}

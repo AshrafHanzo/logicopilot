@@ -7,6 +7,7 @@ import { DataTable, type Column } from "../../components/ui/DataTable";
 import { RoleBadge, StatusBadge } from "../../components/ui/Badge";
 import { CreateTenantModal } from "./CreateTenantModal";
 import { CreateTenantAdminModal } from "./CreateTenantAdminModal";
+import { InboxButton } from "./InboxButton";
 import * as tenantsApi from "../../api/tenants";
 import * as usersApi from "../../api/users";
 import type { Tenant } from "../../types/tenant";
@@ -19,6 +20,7 @@ export function SuperAdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [tenantModalOpen, setTenantModalOpen] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [editAdmin, setEditAdmin] = useState<User | null>(null);
 
   async function refresh() {
     setError(null);
@@ -38,6 +40,7 @@ export function SuperAdminDashboard() {
   }, []);
 
   const tenantAdmins = users.filter((u) => u.role === "tenant_admin");
+  const operators = users.filter((u) => u.role === "operator");
   const tenantNameById = new Map(tenants.map((t) => [t.id, t.name]));
 
   async function handleToggleActive(user: User) {
@@ -68,24 +71,30 @@ export function SuperAdminDashboard() {
       header: "",
       className: "text-right",
       render: (u) => (
-        <Button variant="ghost" size="sm" onClick={() => handleToggleActive(u)}>
-          {u.is_active ? "Disable" : "Enable"}
-        </Button>
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => { setEditAdmin(u); setAdminModalOpen(true); }}>
+            Edit
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => handleToggleActive(u)}>
+            {u.is_active ? "Disable" : "Enable"}
+          </Button>
+        </div>
       ),
     },
   ];
 
   return (
-    <AppShell title="Super Admin" subtitle="Manage tenants and the admins who run them.">
+    <AppShell title="Super Admin" subtitle="Manage tenants and the admins who run them." actions={<InboxButton />}>
       {error && (
         <div className="mb-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
           {error}
         </div>
       )}
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Tenants" value={tenants.length} />
         <StatCard label="Tenant Admins" value={tenantAdmins.length} />
+        <StatCard label="Operators" value={operators.length} />
         <StatCard label="All Users" value={users.length} />
       </div>
 
@@ -109,7 +118,7 @@ export function SuperAdminDashboard() {
       <Card>
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
           <h2 className="font-semibold text-slate-900 dark:text-slate-50">Tenant Admins</h2>
-          <Button size="sm" onClick={() => setAdminModalOpen(true)} disabled={tenants.length === 0}>
+          <Button size="sm" onClick={() => { setEditAdmin(null); setAdminModalOpen(true); }} disabled={tenants.length === 0}>
             + New Tenant Admin
           </Button>
         </div>
@@ -133,10 +142,15 @@ export function SuperAdminDashboard() {
       />
       <CreateTenantAdminModal
         open={adminModalOpen}
-        onClose={() => setAdminModalOpen(false)}
+        onClose={() => {
+          setAdminModalOpen(false);
+          setEditAdmin(null);
+        }}
         tenants={tenants}
+        editUser={editAdmin}
         onCreated={() => {
           setAdminModalOpen(false);
+          setEditAdmin(null);
           refresh();
         }}
       />
